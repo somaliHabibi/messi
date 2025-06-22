@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Messi vs Ommak - Who Will Win?</title>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+  <style>
+    body {
+      background-color: #111;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      margin: 10px;
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    textarea {
+      width: 90%;
+      height: 100px;
+      margin-top: 10px;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+    }
+    input[type="text"] {
+      width: 60%;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 8px;
+      margin: 5px;
+    }
+    .encrypt { background-color: #1e90ff; color: white; }
+    .decrypt { background-color: #ff4d4d; color: white; }
+    .copy { background-color: #00cc66; color: white; }
+    .storage { background-color: #888; color: white; }
+    .export { background-color: #ff9900; color: white; }
+    .import { background-color: #3399ff; color: white; }
+    .bulk-decrypt { background-color: #aa00ff; color: white; }
+  </style>
+</head>
+<body>
+  <h1>🏆 Messi vs Ommak - Who Will Win?</h1>
+
+  <input type="text" id="tag" placeholder="Goal nickname (tag)">
+  <br>
+  <textarea id="input" placeholder="Paste your URL or encrypted stuff here..."></textarea>
+  <br>
+
+  <button class="encrypt" onclick="encryptUrl()">🧠 Messi Makes a Move</button>
+  <button class="decrypt" onclick="decryptUrl()">👵 Ommak Counters</button>
+  <button class="copy" onclick="copyOutput()">🗌 VAR Copy Decision</button>
+  <button class="storage" onclick="showSaved()">⚽ Replay All Moments</button>
+  <button class="export" onclick="exportSaved()">📤 Export Encrypted URLs</button>
+  <button class="import" onclick="document.getElementById('importFile').click()">📥 Import Encrypted URLs</button>
+  <button class="bulk-decrypt" onclick="bulkDecrypt()">🔓 Decrypt All with Secret Code</button>
+  <input type="file" id="importFile" style="display:none" onchange="importSaved(event)">
+
+  <h3>Result:</h3>
+  <textarea id="output" readonly></textarea>
+
+  <script>
+    let aesKey;
+    const fixedIv = CryptoJS.enc.Utf8.parse('thisIsAFixedIV123'); // 16 bytes
+
+    function deriveKey(passphrase) {
+      const salt = CryptoJS.enc.Utf8.parse('messivsommaksalt');
+      aesKey = CryptoJS.PBKDF2(passphrase, salt, {
+        keySize: 256 / 32,
+        iterations: 1000
+      });
+    }
+
+    function encryptUrl() {
+      if (!aesKey) return alert("Passphrase not set!");
+      const url = document.getElementById('input').value;
+      const tag = document.getElementById('tag').value || 'Untitled';
+      if (!url) return alert("Paste something first!");
+      try {
+        const encrypted = CryptoJS.AES.encrypt(url, aesKey, { iv: fixedIv }).toString();
+        localStorage.setItem(tag, encrypted);
+        document.getElementById('output').value = `Tag: ${tag}\nEncrypted:\n${encrypted}`;
+      } catch (e) {
+        document.getElementById('output').value = 'Encryption error: ' + e.message;
+      }
+    }
+
+    function decryptUrl() {
+      if (!aesKey) return alert("Passphrase not set!");
+      const data = document.getElementById('input').value;
+      if (!data) return alert("Paste encrypted stuff first!");
+      try {
+        const decrypted = CryptoJS.AES.decrypt(data, aesKey, { iv: fixedIv }).toString(CryptoJS.enc.Utf8);
+        document.getElementById('output').value = decrypted || 'Nothing decrypted';
+      } catch (e) {
+        document.getElementById('output').value = 'Invalid encrypted input';
+      }
+    }
+
+    function bulkDecrypt() {
+      const secondaryCode = prompt("🔐 Enter secondary passcode to reveal everything:");
+      if (secondaryCode !== 'messiommak2024') {
+        alert("Access denied. Messi vs Ommak result remains encrypted.");
+        return;
+      }
+      if (!aesKey) return alert("Passphrase not set!");
+      const keys = Object.keys(localStorage);
+      if (!keys.length) return alert("No stored encrypted URLs.");
+      let decryptedList = '';
+      keys.forEach(tag => {
+        try {
+          const encrypted = localStorage.getItem(tag);
+          const decrypted = CryptoJS.AES.decrypt(encrypted, aesKey, { iv: fixedIv }).toString(CryptoJS.enc.Utf8);
+          if (decrypted) {
+            decryptedList += `🎯 ${tag}:\n${decrypted}\n\n`;
+          } else {
+            decryptedList += `🚫 ${tag}: Decryption failed or empty\n\n`;
+          }
+        } catch (e) {
+          decryptedList += `🚫 ${tag}: Decryption error\n\n`;
+        }
+      });
+      document.getElementById('output').value = decryptedList.trim();
+    }
+
+    function copyOutput() {
+      const out = document.getElementById('output');
+      out.select();
+      document.execCommand('copy');
+      alert("VAR copied to clipboard!");
+    }
+
+    function showSaved() {
+      const keys = Object.keys(localStorage);
+      if (!keys.length) return alert("No recorded goals.");
+      let log = '';
+      keys.forEach(tag => {
+        log += `\n\n🎥 ${tag}:\n${localStorage.getItem(tag)}`;
+      });
+      document.getElementById('output').value = log.trim();
+    }
+
+    function exportSaved() {
+      const data = {};
+      Object.keys(localStorage).forEach(key => {
+        data[key] = localStorage.getItem(key);
+      });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'messi_vs_ommak_urls.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importSaved(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          Object.keys(data).forEach(key => {
+            localStorage.setItem(key, data[key]);
+          });
+          alert("Imported successfully!");
+        } catch (err) {
+          alert("Invalid file or corrupted data.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    window.onload = () => {
+      const pass = prompt("🔐 Enter your secret key/passphrase:");
+      if (!pass) {
+        alert("You need a passphrase to use the app!");
+      } else {
+        deriveKey(pass);
+        console.log("Key derived.");
+      }
+    };
+  </script>
+</body>
+</html>
